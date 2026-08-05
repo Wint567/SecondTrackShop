@@ -47,14 +47,14 @@
     "@axe-core/playwright": "4.12.1",
     "@next/env": "16.2.12",
     "@playwright/test": "1.62.1",
-    "@types/node": "22.19.19",
-    "@types/react": "19.2.14",
-    "@types/react-dom": "19.2.3",
+    "@types/node": "26.1.2",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
     "@types/three": "^0.185.3",
-    "eslint": "9.39.4",
+    "eslint": "10.8.0",
     "eslint-config-next": "^16.2.12",
-    "prettier": "3.6.2",
-    "typescript": "5.9.3"
+    "prettier": "3.9.6",
+    "typescript": "7.0.2"
   },
   "type": "module"
 }
