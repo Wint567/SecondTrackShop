@@ -2,26 +2,28 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  robots: { follow: false, index: false },
-  title: "Страница не найдена",
+  title: "Page not found",
 };
 
 export default function NotFound() {
   return (
-    <main id="main-content" className="not-found page-shell">
-      <p className="eyebrow">404</p>
-      <h1>Эта страница продолжила путь без нас.</h1>
-      <p>
-        Возможно, товар уже снят с публикации или адрес был введён с ошибкой.
-      </p>
+    <main id="main-content" className="not-found cutpaste-sheet">
+      <p className="eyebrow">Wrong turn</p>
+      <h1>404 — LOST IN THE RACK</h1>
+      <p>This page is no longer part of the collection.</p>
       <div className="not-found__actions">
-        <Link className="button button--primary" href="/catalog">
-          Перейти в каталог
+        <Link className="club-button" href="/catalog">
+          Back to shop
         </Link>
         <Link className="text-link" href="/">
-          На главную
+          Home
         </Link>
       </div>
+      <span aria-hidden="true" className="not-found__sticker">
+        KEEP
+        <br />
+        LOOKING :)
+      </span>
     </main>
   );
 }

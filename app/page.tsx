@@ -1,26 +1,20 @@
 import type { Metadata } from "next";
 import { HomePage } from "@/components/pages/HomePage";
 import { fetchPublicItems } from "@/services/store";
-import { loadInitialStoreState } from "@/utils/store-state";
+import { loadServerStoreState } from "@/utils/server-store-state";
 
 export const revalidate = 300;
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
   title: {
-    absolute: "SECONDTRACK — отобранная одежда",
+    absolute: "SECONDTRACK — Cut–Paste Club",
   },
-  description:
-    "Отобранная винтажная одежда и оригинальные вещи в единственном экземпляре.",
+  description: "Found items. Worn again. Every piece gets a next track.",
 };
 
 export default async function Home() {
-  const initialState = await loadInitialStoreState(fetchPublicItems);
+  const initialState = await loadServerStoreState(fetchPublicItems);
 
-  return (
-    <HomePage
-      initialError={initialState.error}
-      initialProducts={initialState.products}
-    />
-  );
+  return <HomePage initialError={initialState.error} initialProducts={initialState.products} />;
 }

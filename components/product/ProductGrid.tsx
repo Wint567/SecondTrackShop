@@ -17,6 +17,8 @@ export function ProductGrid({
     <div className="product-grid">
       {products.map((product, index) => (
         <ProductCard
+          accent={index % 4}
+          archiveIndex={index}
           favorite={favorites.has(product.id)}
           key={product.id}
           onToggleFavorite={toggleFavorite}

@@ -1,24 +1,17 @@
-import { headers } from "next/headers";
+const FALLBACK_ORIGIN = "http://localhost:3000";
 
-export async function getSiteOrigin(): Promise<string> {
-  const requestHeaders = await headers();
-  const rawHost =
-    requestHeaders.get("x-forwarded-host") ??
-    requestHeaders.get("host") ??
-    "localhost:3000";
-  const candidateHost = rawHost.split(",")[0].trim();
-  const host = /^[a-z0-9.-]+(?::\d+)?$/i.test(candidateHost)
-    ? candidateHost
-    : "localhost:3000";
-  const forwardedProtocol = requestHeaders.get("x-forwarded-proto")
-    ?.split(",")[0]
-    .trim();
-  const protocol =
-    forwardedProtocol === "http" || forwardedProtocol === "https"
-      ? forwardedProtocol
-      : host.startsWith("localhost") || host.startsWith("127.0.0.1")
-        ? "http"
-        : "https";
+export function getSiteOrigin(): string {
+  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  const vercelHost =
+    process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim() ?? process.env.VERCEL_URL?.trim();
+  const candidate = configured || (vercelHost ? `https://${vercelHost}` : "");
+  if (!candidate) return FALLBACK_ORIGIN;
 
-  return `${protocol}://${host}`;
+  try {
+    const origin = new URL(candidate).origin;
+    return /^https?:\/\//i.test(origin) ? origin : FALLBACK_ORIGIN;
+  } catch {
+    console.error("[SECONDTRACK] NEXT_PUBLIC_SITE_URL is not a valid absolute HTTP(S) URL.");
+    return FALLBACK_ORIGIN;
+  }
 }

@@ -29,7 +29,8 @@ export type CatalogFilters = {
   brands: string[];
   sizes: string[];
   conditions: string[];
+  priceRanges: string[];
   statuses: string[];
 };
 
-export type CatalogSort = "newest" | "price-asc" | "price-desc";
+export type CatalogSort = "newest" | "price-asc" | "price-desc" | "name-asc";

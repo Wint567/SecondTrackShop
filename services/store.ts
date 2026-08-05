@@ -42,17 +42,52 @@ type PhotoRow = Record<string, unknown> & {
   created_at?: string;
 };
 
+type SupabaseErrorLike = {
+  code?: unknown;
+  details?: unknown;
+  hint?: unknown;
+  message?: unknown;
+  name?: unknown;
+  status?: unknown;
+};
+
+const safeRequestError = (cause: unknown) => {
+  const source = cause && typeof cause === "object" ? (cause as SupabaseErrorLike) : {};
+  const safeText = (value: unknown) =>
+    typeof value === "string" && value.trim() ? value.trim() : undefined;
+  const safeStatus = typeof source.status === "number" ? source.status : undefined;
+
+  return {
+    code: safeText(source.code),
+    details: safeText(source.details),
+    hint: safeText(source.hint),
+    message:
+      safeText(source.message) ?? (cause instanceof Error ? cause.message : "Request failed."),
+    name: safeText(source.name) ?? (cause instanceof Error ? cause.name : "SupabaseRequestError"),
+    status: safeStatus,
+  };
+};
+
 export class StoreDataError extends Error {
   public readonly area: "items" | "photos";
 
   constructor(area: "items" | "photos", cause?: unknown) {
-    super("Не удалось загрузить данные магазина.");
+    super("The shop data could not be loaded.", { cause });
     this.name = "StoreDataError";
     this.area = area;
 
-    if (import.meta.env.DEV) {
-      console.error(`[SECONDTRACK] Ошибка загрузки ${area}:`, cause);
-    }
+    const diagnostic = safeRequestError(cause);
+    console.error(
+      `[SECONDTRACK] public ${area} request failed.`,
+      process.env.NODE_ENV === "development"
+        ? diagnostic
+        : {
+            code: diagnostic.code,
+            message: diagnostic.message,
+            name: diagnostic.name,
+            status: diagnostic.status,
+          },
+    );
   }
 }
 
@@ -65,8 +100,7 @@ const textValue = (value: unknown, fallback: string) => {
 const isAbsoluteUrl = (value: string) => /^https?:\/\//i.test(value);
 
 const resolvePhotoUrl = (row: PhotoRow): string | null => {
-  const imageUrl =
-    typeof row.image_url === "string" ? row.image_url.trim() : "";
+  const imageUrl = typeof row.image_url === "string" ? row.image_url.trim() : "";
   if (!imageUrl) return null;
   if (isAbsoluteUrl(imageUrl)) return imageUrl;
   if (!supabase) return null;
@@ -78,9 +112,7 @@ const resolvePhotoUrl = (row: PhotoRow): string | null => {
       ? imageUrl.slice(markerIndex + publicStorageMarker.length)
       : imageUrl.replace(/^\/+/, "").replace(/^item-photos\//, "");
 
-  return supabase.storage
-    .from("item-photos")
-    .getPublicUrl(storagePath).data.publicUrl;
+  return supabase.storage.from("item-photos").getPublicUrl(storagePath).data.publicUrl;
 };
 
 const normalizePhotos = (rows: PhotoRow[]): ProductPhoto[] => {
@@ -110,30 +142,20 @@ const normalizePhotos = (rows: PhotoRow[]): ProductPhoto[] => {
   });
 };
 
-const normalizeProduct = (
-  row: PublicStoreRow,
-  allPhotos: ProductPhoto[],
-): Product => {
-  const itemPhotos = selectProductPhotos(
-    allPhotos,
-    row.id,
-    row.primary_photo_id,
-  );
+const normalizeProduct = (row: PublicStoreRow, allPhotos: ProductPhoto[]): Product => {
+  const itemPhotos = selectProductPhotos(allPhotos, row.id, row.primary_photo_id);
 
   return {
     id: row.id,
     slug: textValue(row.slug, row.id),
-    title: textValue(row.title, "Вещь без названия"),
-    brand: textValue(row.brand, "Без бренда"),
-    category: textValue(row.category, "Другое"),
-    size: textValue(row.size, "Не указан"),
-    condition: textValue(row.condition, "Не указано"),
-    description: textValue(
-      row.public_description,
-      "Описание появится в ближайшее время.",
-    ),
+    title: textValue(row.title, "Untitled item"),
+    brand: textValue(row.brand, "Unbranded"),
+    category: textValue(row.category, "Other"),
+    size: textValue(row.size, "Not specified"),
+    condition: textValue(row.condition, "Not specified"),
+    description: textValue(row.public_description, "More details are coming soon."),
     price: parsePublicPrice(row.planned_sale_price),
-    status: textValue(row.status, "Статус не указан"),
+    status: textValue(row.status, "Status unavailable"),
     vintedUrl: textValue(row.vinted_url, "") || null,
     primaryPhotoId: row.primary_photo_id,
     createdAt: textValue(row.created_at, new Date(0).toISOString()),
@@ -141,14 +163,15 @@ const normalizeProduct = (
   };
 };
 
-async function fetchPhotosByItemIds(itemIds: string[]) {
+async function fetchPhotosByItemIds(itemIds: string[], signal?: AbortSignal) {
   if (!supabase || itemIds.length === 0) return [];
 
   const { data, error } = await supabase
     .from("item_photos")
     .select("id,item_id,image_url,created_at")
     .in("item_id", itemIds)
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true })
+    .abortSignal(signal ?? new AbortController().signal);
 
   if (error) throw new StoreDataError("photos", error);
   return normalizePhotos((data ?? []) as PhotoRow[]);
@@ -156,10 +179,7 @@ async function fetchPhotosByItemIds(itemIds: string[]) {
 
 const requirePublicClient = () => {
   if (!supabase) {
-    throw new StoreDataError(
-      "items",
-      new Error("Public Supabase configuration is unavailable."),
-    );
+    throw new StoreDataError("items", new Error("Public Supabase configuration is unavailable."));
   }
 
   return supabase;
@@ -188,23 +208,39 @@ export async function fetchPublicSitemapItems(): Promise<
   });
 }
 
-export async function fetchPublicItems(): Promise<Product[]> {
+export async function fetchPublicItems(signal?: AbortSignal): Promise<Product[]> {
   const publicClient = requirePublicClient();
 
   const { data, error } = await publicClient
     .from("public_store_items")
     .select(PUBLIC_ITEM_FIELDS)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .abortSignal(signal ?? new AbortController().signal);
 
   if (error) throw new StoreDataError("items", error);
 
   const rows = (data ?? []) as unknown as PublicStoreRow[];
-  const photos = await fetchPhotosByItemIds(rows.map((row) => row.id));
-  return rows.map((row) => normalizeProduct(row, photos));
+  const photos = await fetchPhotosByItemIds(
+    rows.map((row) => row.id),
+    signal,
+  );
+  const products = rows.map((row) => normalizeProduct(row, photos));
+
+  if (process.env.NODE_ENV === "development") {
+    console.info("[SECONDTRACK] public store response.", {
+      itemIds: products.slice(0, 3).map((product) => product.id),
+      items: products.length,
+      photos: photos.length,
+      productsWithPhotos: products.filter((product) => product.photos.length > 0).length,
+    });
+  }
+
+  return products;
 }
 
 export async function fetchPublicItemBySlug(
   slug: string,
+  signal?: AbortSignal,
 ): Promise<Product | null> {
   const publicClient = requirePublicClient();
 
@@ -212,19 +248,21 @@ export async function fetchPublicItemBySlug(
     .from("public_store_items")
     .select(PUBLIC_ITEM_FIELDS)
     .eq("slug", slug)
+    .abortSignal(signal ?? new AbortController().signal)
     .maybeSingle();
 
   if (error) throw new StoreDataError("items", error);
   if (!data) return null;
 
   const row = data as unknown as PublicStoreRow;
-  const photos = await fetchPhotosByItemIds([row.id]);
+  const photos = await fetchPhotosByItemIds([row.id], signal);
   return normalizeProduct(row, photos);
 }
 
 export async function fetchRelatedPublicItems(
   category: string,
   excludedId: string,
+  signal?: AbortSignal,
 ): Promise<Product[]> {
   if (!category) return [];
   const publicClient = requirePublicClient();
@@ -235,11 +273,15 @@ export async function fetchRelatedPublicItems(
     .eq("category", category)
     .neq("id", excludedId)
     .order("created_at", { ascending: false })
+    .abortSignal(signal ?? new AbortController().signal)
     .limit(4);
 
   if (error) throw new StoreDataError("items", error);
 
   const rows = (data ?? []) as unknown as PublicStoreRow[];
-  const photos = await fetchPhotosByItemIds(rows.map((row) => row.id));
+  const photos = await fetchPhotosByItemIds(
+    rows.map((row) => row.id),
+    signal,
+  );
   return rows.map((row) => normalizeProduct(row, photos));
 }

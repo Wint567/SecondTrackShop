@@ -15,12 +15,13 @@ export function selectProductPhotos(
     })
     .sort((first, second) => first.order - second.order);
 
-  const primaryIndex = itemPhotos.findIndex(
-    (photo) => photo.id === primaryPhotoId,
-  );
+  const primaryIndex = itemPhotos.findIndex((photo) => photo.id === primaryPhotoId);
   if (primaryIndex > 0) {
-    const [primary] = itemPhotos.splice(primaryIndex, 1);
-    itemPhotos.unshift(primary);
+    const primary = itemPhotos[primaryIndex];
+    if (primary) {
+      itemPhotos.splice(primaryIndex, 1);
+      itemPhotos.unshift(primary);
+    }
   }
 
   return itemPhotos;
