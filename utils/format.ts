@@ -9,16 +9,23 @@ export function parsePublicPrice(value: unknown): number | null {
 }
 
 export function formatPrice(price: number | null) {
-  if (price === null || !Number.isFinite(price)) return "Цена по запросу";
+  if (price === null || !Number.isFinite(price)) return "Price on request";
 
-  return new Intl.NumberFormat("pl-PL", {
+  return new Intl.NumberFormat("en-GB", {
     maximumFractionDigits: 2,
     minimumFractionDigits: 0,
     style: "currency",
     currency: "PLN",
-  })
-    .format(price)
-    .replace("PLN", "zł");
+  }).format(price);
+}
+
+export function formatArchivePrice(price: number | null) {
+  if (price === null || !Number.isFinite(price)) return "Price on request";
+
+  return `${new Intl.NumberFormat("en-GB", {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
+  }).format(price)} PLN`;
 }
 
 export function isSafeExternalUrl(value: string | null) {
@@ -36,11 +43,5 @@ export function isSafeExternalUrl(value: string | null) {
 }
 
 export function pluralizeProducts(count: number) {
-  const mod100 = count % 100;
-  const mod10 = count % 10;
-
-  if (mod100 >= 11 && mod100 <= 14) return `${count} товаров`;
-  if (mod10 === 1) return `${count} товар`;
-  if (mod10 >= 2 && mod10 <= 4) return `${count} товара`;
-  return `${count} товаров`;
+  return `${count} ${count === 1 ? "item" : "items"}`;
 }

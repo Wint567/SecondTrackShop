@@ -25,9 +25,7 @@ export function useDialogFocus({
 
     const dialog = dialogRef.current;
     const previouslyFocused =
-      document.activeElement instanceof HTMLElement
-        ? document.activeElement
-        : null;
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const focusableElements = () =>
       Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
         (element) => !element.hidden && element.getAttribute("aria-hidden") !== "true",
@@ -44,7 +42,8 @@ export function useDialogFocus({
       }
 
       const first = elements[0];
-      const last = elements[elements.length - 1];
+      const last = elements.at(-1);
+      if (!first || !last) return;
       if (event.shiftKey && document.activeElement === first) {
         event.preventDefault();
         last.focus();

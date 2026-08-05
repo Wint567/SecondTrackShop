@@ -1,59 +1,63 @@
 "use client";
 
-import { ChevronDown, SlidersHorizontal, X } from "lucide-react";
+import { ChevronDown, RotateCcw, SlidersHorizontal, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useBodyLock } from "@/hooks/use-body-lock";
 import { useDialogFocus } from "@/hooks/use-dialog-focus";
-import type {
-  CatalogFilters,
-  CatalogSort,
-} from "@/types/product";
+import type { CatalogFilters } from "@/types/product";
+import { emptyCatalogFilters } from "@/utils/catalog";
+import { presentCategory, presentCondition } from "@/utils/presentation";
+import { getPublicStatus } from "@/utils/status";
 
-type OptionSet = {
-  categories: string[];
-  brands: string[];
-  sizes: string[];
-  conditions: string[];
-  statuses: string[];
-};
+type OptionSet = Record<keyof CatalogFilters, string[]>;
 
 type CatalogControlsProps = {
   filters: CatalogFilters;
+  getResultCount: (filters: CatalogFilters) => number;
   hasExternalState: boolean;
   onChange: (filters: CatalogFilters) => void;
   onReset: () => void;
-  onSortChange: (sort: CatalogSort) => void;
   options: OptionSet;
-  resultCount: number;
-  sort: CatalogSort;
 };
 
-const filterDefinitions: Array<{
-  key: keyof CatalogFilters;
-  label: string;
-}> = [
-  { key: "categories", label: "Категория" },
-  { key: "brands", label: "Бренд" },
-  { key: "sizes", label: "Размер" },
-  { key: "conditions", label: "Состояние" },
-  { key: "statuses", label: "Статус" },
+const filterDefinitions: Array<{ key: keyof CatalogFilters; label: string }> = [
+  { key: "categories", label: "Category" },
+  { key: "sizes", label: "Size" },
+  { key: "brands", label: "Brand" },
+  { key: "conditions", label: "Condition" },
+  { key: "priceRanges", label: "Price" },
+  { key: "statuses", label: "Availability" },
 ];
+
+const copyFilters = (filters: CatalogFilters): CatalogFilters =>
+  Object.fromEntries(
+    Object.entries(filters).map(([key, values]) => [key, [...values]]),
+  ) as CatalogFilters;
+
+const countFilters = (filters: CatalogFilters) =>
+  Object.values(filters).reduce((total, values) => total + values.length, 0);
+
+const presentFilter = (key: keyof CatalogFilters, value: string) => {
+  if (key === "categories") return presentCategory(value);
+  if (key === "conditions") return presentCondition(value);
+  if (key === "statuses") return getPublicStatus(value).label;
+  return value;
+};
 
 function FilterOptions({
   active,
+  keyName,
   label,
   onToggle,
   options,
 }: {
   active: string[];
+  keyName: keyof CatalogFilters;
   label: string;
   onToggle: (option: string) => void;
   options: string[];
 }) {
-  if (options.length === 0) {
-    return <p className="filter-empty">Нет доступных значений</p>;
-  }
-
+  if (options.length === 0) return <p className="filter-empty">No options available</p>;
   return (
     <fieldset className="filter-options">
       <legend className="sr-only">{label}</legend>
@@ -64,7 +68,7 @@ function FilterOptions({
             onChange={() => onToggle(option)}
             type="checkbox"
           />
-          <span>{option}</span>
+          <span>{presentFilter(keyName, option)}</span>
         </label>
       ))}
     </fieldset>
@@ -73,131 +77,123 @@ function FilterOptions({
 
 export function CatalogControls({
   filters,
+  getResultCount,
   hasExternalState,
   onChange,
   onReset,
-  onSortChange,
   options,
-  resultCount,
-  sort,
 }: CatalogControlsProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [draftFilters, setDraftFilters] = useState(() => copyFilters(filters));
   const drawerCloseRef = useRef<HTMLButtonElement>(null);
   const drawerRef = useRef<HTMLElement>(null);
   useBodyLock(drawerOpen);
-  useDialogFocus({
-    dialogRef: drawerRef,
-    initialFocusRef: drawerCloseRef,
-    open: drawerOpen,
-  });
+  useDialogFocus({ dialogRef: drawerRef, initialFocusRef: drawerCloseRef, open: drawerOpen });
 
   useEffect(() => {
     if (!drawerOpen) return;
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setDrawerOpen(false);
-    };
+    const closeOnEscape = (event: KeyboardEvent) => event.key === "Escape" && setDrawerOpen(false);
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [drawerOpen]);
 
-  const activeCount = useMemo(
-    () =>
-      Object.values(filters).reduce(
-        (total, values) => total + values.length,
-        0,
-      ),
-    [filters],
+  const activeCount = useMemo(() => countFilters(filters), [filters]);
+  const draftActiveCount = useMemo(() => countFilters(draftFilters), [draftFilters]);
+  const draftResultCount = useMemo(
+    () => getResultCount(draftFilters),
+    [draftFilters, getResultCount],
   );
 
-  const toggle = (key: keyof CatalogFilters, option: string) => {
-    const current = filters[key];
-    onChange({
-      ...filters,
-      [key]: current.includes(option)
-        ? current.filter((value) => value !== option)
-        : [...current, option],
-    });
+  const toggle = (source: CatalogFilters, key: keyof CatalogFilters, option: string) => ({
+    ...source,
+    [key]: source[key].includes(option)
+      ? source[key].filter((value) => value !== option)
+      : [...source[key], option],
+  });
+
+  const filterList = (
+    active: CatalogFilters,
+    onToggle: (key: keyof CatalogFilters, option: string) => void,
+    mobile = false,
+  ) => (
+    <div className={mobile ? "filter-drawer__body" : "catalog-filterbar__groups"}>
+      {filterDefinitions.map(({ key, label }) => (
+        <details key={key}>
+          <summary>
+            {label}
+            {active[key].length > 0 && <span className="filter-count">{active[key].length}</span>}
+            <ChevronDown aria-hidden="true" />
+          </summary>
+          <FilterOptions
+            active={active[key]}
+            keyName={key}
+            label={label}
+            onToggle={(option) => onToggle(key, option)}
+            options={options[key]}
+          />
+        </details>
+      ))}
+    </div>
+  );
+
+  const openDrawer = () => {
+    setDraftFilters(copyFilters(filters));
+    setDrawerOpen(true);
   };
 
   return (
     <>
-      <div className="catalog-controls catalog-controls--desktop">
-        <div className="desktop-filters">
-          {filterDefinitions.map(({ key, label }) => (
-            <details className="filter-dropdown" key={key}>
-              <summary>
-                {label}
-                {filters[key].length > 0 && (
-                  <span className="filter-count">{filters[key].length}</span>
-                )}
-                <ChevronDown aria-hidden="true" />
-              </summary>
-              <div className="filter-dropdown__panel">
-                <FilterOptions
-                  active={filters[key]}
-                  label={label}
-                  onToggle={(option) => toggle(key, option)}
-                  options={options[key]}
-                />
-              </div>
-            </details>
-          ))}
-        </div>
-        <div className="catalog-sort">
-          <label htmlFor="desktop-sort">Сортировка</label>
-          <select
-            id="desktop-sort"
-            onChange={(event) =>
-              onSortChange(event.target.value as CatalogSort)
-            }
-            value={sort}
-          >
-            <option value="newest">Сначала новые</option>
-            <option value="price-asc">Цена: по возрастанию</option>
-            <option value="price-desc">Цена: по убыванию</option>
-          </select>
+      <div className="catalog-filterbar" aria-label="Catalog filters">
+        <div className="catalog-filterbar__categories">
           <button
-            className="reset-button"
-            disabled={activeCount === 0 && !hasExternalState}
-            onClick={onReset}
+            className={filters.categories.length === 0 ? "is-active" : ""}
+            onClick={() => onChange({ ...filters, categories: [] })}
             type="button"
           >
-            Сбросить
+            All items
           </button>
+          {options.categories.slice(0, 4).map((category) => (
+            <button
+              className={filters.categories.includes(category) ? "is-active" : ""}
+              key={category}
+              onClick={() => onChange(toggle(filters, "categories", category))}
+              type="button"
+            >
+              {presentCategory(category)}
+            </button>
+          ))}
         </div>
+        {filterList(filters, (key, option) => onChange(toggle(filters, key, option)))}
+        <button
+          className="filter-reset"
+          disabled={activeCount === 0 && !hasExternalState}
+          onClick={onReset}
+          type="button"
+        >
+          Clear <RotateCcw aria-hidden="true" />
+        </button>
       </div>
 
-      <div className="catalog-controls catalog-controls--mobile">
+      <div className="catalog-controls--mobile">
         <button
           aria-controls="catalog-filter-drawer"
           aria-expanded={drawerOpen}
-          className="button button--outline"
-          onClick={() => setDrawerOpen(true)}
+          className="catalog-filter-trigger"
+          onClick={openDrawer}
           type="button"
         >
-          <SlidersHorizontal aria-hidden="true" />
-          Фильтры
-          {activeCount > 0 && <span className="filter-count">{activeCount}</span>}
+          <SlidersHorizontal aria-hidden="true" /> Filter{" "}
+          {activeCount > 0 && <span>{activeCount}</span>}
         </button>
-        <label className="mobile-sort">
-          <span className="sr-only">Сортировка</span>
-          <select
-            onChange={(event) =>
-              onSortChange(event.target.value as CatalogSort)
-            }
-            value={sort}
-          >
-            <option value="newest">Сначала новые</option>
-            <option value="price-asc">Цена ↑</option>
-            <option value="price-desc">Цена ↓</option>
-          </select>
-        </label>
       </div>
 
       {drawerOpen && (
-        <div className="overlay" onMouseDown={() => setDrawerOpen(false)}>
+        <div
+          className="overlay club-overlay filter-overlay"
+          onMouseDown={() => setDrawerOpen(false)}
+        >
           <aside
-            aria-label="Фильтры каталога"
+            aria-label="Catalog filters"
             aria-modal="true"
             className="filter-drawer"
             id="catalog-filter-drawer"
@@ -205,15 +201,18 @@ export function CatalogControls({
             ref={drawerRef}
             role="dialog"
           >
-            <div className="filter-drawer__handle" aria-hidden="true" />
+            <span className="filter-drawer__sticker">
+              WORN
+              <br />
+              AGAIN
+            </span>
             <div className="filter-drawer__header">
-              <div>
-                <p className="eyebrow">Каталог</p>
-                <h2>Фильтры</h2>
-              </div>
+              <h2>
+                FILTER <i>/</i> <small>{draftResultCount} found</small>
+              </h2>
+              <p>narrow it down</p>
               <button
-                aria-label="Закрыть фильтры"
-                className="icon-button"
+                aria-label="Close filters and discard changes"
                 onClick={() => setDrawerOpen(false)}
                 ref={drawerCloseRef}
                 type="button"
@@ -221,43 +220,29 @@ export function CatalogControls({
                 <X aria-hidden="true" />
               </button>
             </div>
-            <div className="filter-drawer__body">
-              {filterDefinitions.map(({ key, label }) => (
-                <details key={key}>
-                  <summary>
-                    {label}
-                    {filters[key].length > 0 && (
-                      <span className="filter-count">{filters[key].length}</span>
-                    )}
-                    <ChevronDown aria-hidden="true" />
-                  </summary>
-                  <FilterOptions
-                    active={filters[key]}
-                    label={label}
-                    onToggle={(option) => toggle(key, option)}
-                    options={options[key]}
-                  />
-                </details>
-              ))}
-            </div>
+            {filterList(
+              draftFilters,
+              (key, option) => setDraftFilters((current) => toggle(current, key, option)),
+              true,
+            )}
             <div className="filter-drawer__footer">
               <button
-                className="button button--outline"
-                disabled={activeCount === 0 && !hasExternalState}
+                className="club-button"
                 onClick={() => {
-                  onReset();
+                  onChange(draftFilters);
                   setDrawerOpen(false);
                 }}
                 type="button"
               >
-                Сбросить
+                Apply filters ({draftResultCount})
               </button>
               <button
-                className="button button--primary"
-                onClick={() => setDrawerOpen(false)}
+                className="filter-drawer__reset"
+                disabled={draftActiveCount === 0}
+                onClick={() => setDraftFilters(emptyCatalogFilters())}
                 type="button"
               >
-                Показать {resultCount}
+                Clear all selections
               </button>
             </div>
           </aside>

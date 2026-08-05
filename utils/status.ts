@@ -5,10 +5,10 @@ export function getPublicStatus(status: string): {
   label: string;
 } {
   if (status === "Куплено") {
-    return { kind: "soon", label: "Скоро в продаже" };
+    return { kind: "soon", label: "Coming soon" };
   }
   if (status === "Выставлено") {
-    return { kind: "available", label: "Доступно" };
+    return { kind: "available", label: "Available" };
   }
-  return { kind: "default", label: status || "Статус не указан" };
+  return { kind: "default", label: status || "Status unavailable" };
 }

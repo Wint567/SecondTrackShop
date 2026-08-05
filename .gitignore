@@ -1,5 +1,3 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
 # dependencies
 /node_modules
 /.pnp
@@ -15,42 +13,46 @@
 
 # next.js
 /.next/
-/.vinext/
 /out/
 
-# misc
+# local build caches left by earlier toolchains
+/.vinext/
+/.wrangler/
+
+# operating system and certificates
 .DS_Store
 *.pem
 
-# debug
+# debug output
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 *.log
 
-# env files (can opt-in for committing if needed)
+# environment files (the example remains tracked)
 .env*
 !.env.example
 .dev.vars*
 *.local
 
-# local preview logs
+# local preview output
 .dev-out.log
 .dev-err.log
-.audit-*
 *.tmp
 *.temp
 
 # vercel
 .vercel
 
-# typescript
+# generated caches
 next-env.d.ts
 /dist/
-/.wrangler/
-/outputs/
-/work/
 /.cache/
 .eslintcache
 *.tsbuildinfo
+
+# browser tests
+/playwright-report/
+/test-results/
+/blob-report/

@@ -3,13 +3,12 @@
 import { Heart } from "lucide-react";
 import Link from "next/link";
 import { ProductImage } from "@/components/ui/ProductImage";
-import { StatusBadge } from "@/components/ui/StatusBadge";
 import type { Product } from "@/types/product";
-import { formatPrice } from "@/utils/format";
-
-const NEWNESS_CUTOFF = Date.now() - 21 * 24 * 60 * 60 * 1000;
+import { formatArchivePrice } from "@/utils/format";
 
 type ProductCardProps = {
+  accent?: number;
+  archiveIndex?: number;
   favorite: boolean;
   onToggleFavorite: (id: string) => void;
   product: Product;
@@ -17,18 +16,19 @@ type ProductCardProps = {
 };
 
 export function ProductCard({
+  accent = 0,
+  archiveIndex = 0,
   favorite,
   onToggleFavorite,
   product,
   priority = false,
 }: ProductCardProps) {
-  const mainPhoto = product.photos[0]?.url;
-  const isNew = new Date(product.createdAt).getTime() >= NEWNESS_CUTOFF;
+  const objectCode = `#${product.id.slice(0, 5).toUpperCase()}-${String(archiveIndex + 1).padStart(3, "0")}`;
 
   return (
     <article className="product-card">
       <Link
-        aria-label={`${product.brand}: ${product.title}`}
+        aria-label={`Open ${product.brand}: ${product.title}`}
         className="product-card__link"
         href={`/product/${encodeURIComponent(product.slug)}`}
       >
@@ -36,44 +36,45 @@ export function ProductCard({
           <ProductImage
             alt={`${product.brand}, ${product.title}`}
             eager={priority}
-            src={mainPhoto}
+            sizes="(max-width: 767px) 46vw, (max-width: 1120px) 23vw, 16vw"
+            src={product.photos[0]?.url}
           />
-          <div className="product-card__badges">
-            {product.status === "Куплено" ? (
-              <StatusBadge status={product.status} />
-            ) : isNew ? (
-              <span className="status-badge status-badge--new">Новинка</span>
-            ) : null}
-          </div>
+          {accent === 0 && (
+            <span className="product-card__sticker">
+              WORN
+              <br />
+              AGAIN
+            </span>
+          )}
+          {accent === 3 && (
+            <span className="product-card__sticker product-card__sticker--pink">
+              RARE
+              <br />
+              FIND
+            </span>
+          )}
         </div>
         <div className="product-card__body">
-          <p className="product-card__brand">{product.brand}</p>
-          <h3>{product.title}</h3>
-          <dl className="product-card__meta">
-            <div>
-              <dt>Размер</dt>
-              <dd>{product.size}</dd>
-            </div>
-            <div>
-              <dt>Состояние</dt>
-              <dd>{product.condition}</dd>
-            </div>
-          </dl>
-          <p className="product-card__price">{formatPrice(product.price)}</p>
+          <h3>
+            <span>{product.brand}</span> {product.title}
+          </h3>
+          <div className="product-card__line">
+            <span>{product.size}</span>
+            <strong>{formatArchivePrice(product.price)}</strong>
+          </div>
+          <span className="product-card__code">{objectCode}</span>
         </div>
       </Link>
       <button
         aria-label={
-          favorite
-            ? `Удалить ${product.title} из избранного`
-            : `Добавить ${product.title} в избранное`
+          favorite ? `Remove ${product.title} from saved objects` : `Save ${product.title}`
         }
         aria-pressed={favorite}
         className={`favorite-button ${favorite ? "is-active" : ""}`}
         onClick={() => onToggleFavorite(product.id)}
         type="button"
       >
-        <Heart aria-hidden="true" fill={favorite ? "currentColor" : "none"} />
+        <Heart aria-hidden="true" />
       </button>
     </article>
   );

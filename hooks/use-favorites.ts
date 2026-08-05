@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { parseFavoriteIds } from "@/utils/favorites";
 
 const STORAGE_KEY = "secondtrack-favorites";
 const CHANGE_EVENT = "secondtrack-favorites-change";
 const EMPTY_SNAPSHOT = "[]";
+let memorySnapshot = EMPTY_SNAPSHOT;
 
 const subscribe = (listener: () => void) => {
   window.addEventListener(CHANGE_EVENT, listener);
@@ -18,38 +19,60 @@ const subscribe = (listener: () => void) => {
 
 const getSnapshot = () => {
   try {
-    return window.localStorage.getItem(STORAGE_KEY) ?? EMPTY_SNAPSHOT;
+    const stored = window.localStorage.getItem(STORAGE_KEY) ?? memorySnapshot;
+    memorySnapshot = stored;
+    return stored;
   } catch {
-    return EMPTY_SNAPSHOT;
+    return memorySnapshot;
   }
 };
 
 const getServerSnapshot = () => EMPTY_SNAPSHOT;
+const subscribeHydration = () => () => undefined;
+
+const storeFavorites = (ids: Iterable<string>) => {
+  memorySnapshot = JSON.stringify([...new Set(ids)]);
+  try {
+    window.localStorage.setItem(STORAGE_KEY, memorySnapshot);
+  } catch {
+    // The in-memory snapshot keeps favorites usable when storage is blocked.
+  }
+  window.dispatchEvent(new Event(CHANGE_EVENT));
+};
 
 export function useFavorites() {
-  const snapshot = useSyncExternalStore(
-    subscribe,
-    getSnapshot,
-    getServerSnapshot,
-  );
+  const snapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
-  const favorites = new Set(parseFavoriteIds(snapshot));
+  const favorites = useMemo(() => new Set(parseFavoriteIds(snapshot)), [snapshot]);
+  const hydrated = useSyncExternalStore(
+    subscribeHydration,
+    () => true,
+    () => false,
+  );
 
   const toggleFavorite = useCallback((id: string) => {
     try {
-      const next = new Set(
-        parseFavoriteIds(window.localStorage.getItem(STORAGE_KEY)),
-      );
+      const next = new Set(parseFavoriteIds(window.localStorage.getItem(STORAGE_KEY)));
 
       if (next.has(id)) next.delete(id);
       else next.add(id);
 
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify([...next]));
-      window.dispatchEvent(new Event(CHANGE_EVENT));
+      storeFavorites(next);
     } catch {
-      // Favorites remain usable as a no-op when storage is blocked by the browser.
+      const next = new Set(parseFavoriteIds(memorySnapshot));
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      storeFavorites(next);
     }
   }, []);
 
-  return { favorites, toggleFavorite };
+  const clearFavorites = useCallback(() => {
+    storeFavorites([]);
+  }, []);
+
+  const replaceFavorites = useCallback((ids: Iterable<string>) => {
+    storeFavorites(ids);
+  }, []);
+
+  return { clearFavorites, favorites, hydrated, replaceFavorites, toggleFavorite };
 }
