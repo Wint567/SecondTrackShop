@@ -76,13 +76,13 @@ npm run format:check
 npm run lint
 npm run typecheck
 npm run test:unit
-npm run build
+npm run build:verified
 npm run verify:prerender
 npm run test:e2e
 npm audit --omit=dev
 ```
 
-`npm run build` also enforces a gzip budget for individual client chunks. The browser suite covers server HTML, URL-state behavior, favorites, product routes, local resources, accessibility, layouts from 320 to 1600 px, reduced motion, WebGL fallback, and pointer-driven canvas updates.
+`npm run build:verified` creates the production build and enforces a gzip budget for individual client chunks. Vercel uses the conventional `npm run build` command, while CI runs the verified variant. The browser suite covers server HTML, URL-state behavior, favorites, product routes, local resources, accessibility, layouts from 320 to 1600 px, reduced motion, WebGL fallback, and pointer-driven canvas updates.
 
 Install the Playwright browsers once before the first local browser run:
 

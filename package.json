@@ -21,7 +21,8 @@
   "packageManager": "npm@10.9.3",
   "scripts": {
     "dev": "next dev",
-    "build": "next build && npm run bundle:check",
+    "build": "next build",
+    "build:verified": "npm run build && npm run bundle:check",
     "start": "next start",
     "test": "npm run test:unit && npm run test:e2e",
     "test:unit": "node --test --experimental-test-isolation=none tests/*.test.mjs",
@@ -32,7 +33,7 @@
     "format:check": "prettier --check .",
     "bundle:check": "node scripts/check-bundle-budget.mjs",
     "verify:prerender": "node scripts/verify-prerendered-html.mjs",
-    "check": "npm run format:check && npm run lint && npm run typecheck && npm run test:unit && npm run build && npm run verify:prerender"
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm run test:unit && npm run build:verified && npm run verify:prerender"
   },
   "dependencies": {
     "@react-three/fiber": "^9.7.0",
