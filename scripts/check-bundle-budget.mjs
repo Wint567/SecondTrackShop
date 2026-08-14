@@ -9,6 +9,7 @@ function chunkDirectoryCandidates(cwd, override) {
   const candidates = [
     override && path.resolve(cwd, override),
     path.join(cwd, ".next", "static", "chunks"),
+    path.join(cwd, ".next", "output", "static", "_next", "static", "chunks"),
     path.join(cwd, ".vercel", "output", "static", "_next", "static", "chunks"),
   ];
 

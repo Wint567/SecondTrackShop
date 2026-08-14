@@ -14,19 +14,26 @@ async function withTemporaryBuild(run) {
   }
 }
 
-test("bundle budget reads client chunks from the Vercel Build Output layout", async () => {
-  await withTemporaryBuild(async (cwd) => {
-    const chunks = path.join(cwd, ".vercel", "output", "static", "_next", "static", "chunks");
-    await mkdir(path.join(chunks, "app"), { recursive: true });
-    await writeFile(path.join(chunks, "app", "page.js"), "console.log('ok');\n");
+test("bundle budget reads client chunks from Vercel output layouts", async (context) => {
+  for (const relativeChunks of [
+    path.join(".next", "output", "static", "_next", "static", "chunks"),
+    path.join(".vercel", "output", "static", "_next", "static", "chunks"),
+  ]) {
+    await context.test(relativeChunks, async () => {
+      await withTemporaryBuild(async (cwd) => {
+        const chunks = path.join(cwd, relativeChunks);
+        await mkdir(path.join(chunks, "app"), { recursive: true });
+        await writeFile(path.join(chunks, "app", "page.js"), "console.log('ok');\n");
 
-    assert.equal(await resolveChunkDirectory({ cwd }), chunks);
-    assert.deepEqual(await checkBundleBudget({ cwd, limitKb: 1 }), {
-      chunkCount: 1,
-      directory: path.join(".vercel", "output", "static", "_next", "static", "chunks"),
-      limitKb: 1,
+        assert.equal(await resolveChunkDirectory({ cwd }), chunks);
+        assert.deepEqual(await checkBundleBudget({ cwd, limitKb: 1 }), {
+          chunkCount: 1,
+          directory: relativeChunks,
+          limitKb: 1,
+        });
+      });
     });
-  });
+  }
 });
 
 test("bundle budget reports every supported location when build output is missing", async () => {
