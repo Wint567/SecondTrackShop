@@ -156,6 +156,7 @@ export function CatalogPage({
           <label className="catalog-sort">
             <span>Sort by</span>
             <select
+              aria-label="Sort by"
               onChange={(event) => updateCatalogState(filters, event.target.value as CatalogSort)}
               value={sort}
             >

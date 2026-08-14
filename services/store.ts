@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase/client";
 import type { Product, ProductPhoto } from "@/types/product";
 import { parsePublicPrice } from "@/utils/format";
 import { selectProductPhotos } from "@/utils/photos";
+import { createAbortError, isAbortError } from "@/utils/request";
 
 const PUBLIC_ITEM_FIELDS = [
   "id",
@@ -91,6 +92,15 @@ export class StoreDataError extends Error {
   }
 }
 
+const throwRequestError = (
+  area: "items" | "photos",
+  cause: unknown,
+  signal?: AbortSignal,
+): never => {
+  if (signal?.aborted || isAbortError(cause)) throw createAbortError();
+  throw new StoreDataError(area, cause);
+};
+
 const textValue = (value: unknown, fallback: string) => {
   if (typeof value !== "string") return fallback;
   const cleaned = value.trim();
@@ -173,7 +183,7 @@ async function fetchPhotosByItemIds(itemIds: string[], signal?: AbortSignal) {
     .order("created_at", { ascending: true })
     .abortSignal(signal ?? new AbortController().signal);
 
-  if (error) throw new StoreDataError("photos", error);
+  if (error) throwRequestError("photos", error, signal);
   return normalizePhotos((data ?? []) as PhotoRow[]);
 }
 
@@ -195,7 +205,7 @@ export async function fetchPublicSitemapItems(): Promise<
     .select("slug,created_at")
     .order("created_at", { ascending: false });
 
-  if (error) throw new StoreDataError("items", error);
+  if (error) throwRequestError("items", error);
   return (data ?? []).flatMap((row) => {
     const slug = textValue(row.slug, "");
     if (!slug) return [];
@@ -217,7 +227,7 @@ export async function fetchPublicItems(signal?: AbortSignal): Promise<Product[]>
     .order("created_at", { ascending: false })
     .abortSignal(signal ?? new AbortController().signal);
 
-  if (error) throw new StoreDataError("items", error);
+  if (error) throwRequestError("items", error, signal);
 
   const rows = (data ?? []) as unknown as PublicStoreRow[];
   const photos = await fetchPhotosByItemIds(
@@ -251,7 +261,7 @@ export async function fetchPublicItemBySlug(
     .abortSignal(signal ?? new AbortController().signal)
     .maybeSingle();
 
-  if (error) throw new StoreDataError("items", error);
+  if (error) throwRequestError("items", error, signal);
   if (!data) return null;
 
   const row = data as unknown as PublicStoreRow;
@@ -276,7 +286,7 @@ export async function fetchRelatedPublicItems(
     .abortSignal(signal ?? new AbortController().signal)
     .limit(4);
 
-  if (error) throw new StoreDataError("items", error);
+  if (error) throwRequestError("items", error, signal);
 
   const rows = (data ?? []) as unknown as PublicStoreRow[];
   const photos = await fetchPhotosByItemIds(

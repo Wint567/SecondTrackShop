@@ -12,7 +12,9 @@ const contentSecurityPolicy = [
   "object-src 'none'",
   `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
-  ...(isDevelopment ? [] : ["upgrade-insecure-requests"]),
+  // Vercel terminates HTTPS before the Next server. Avoid upgrading localhost
+  // preview assets to HTTPS, where `next start` intentionally serves HTTP only.
+  ...(isDevelopment || !process.env.VERCEL ? [] : ["upgrade-insecure-requests"]),
 ].join("; ");
 
 const nextConfig: NextConfig = {

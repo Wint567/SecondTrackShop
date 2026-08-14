@@ -80,7 +80,7 @@ npm run test:e2e
 npm audit --omit=dev
 ```
 
-`npm run build` also enforces a gzip budget for individual client chunks. The browser suite covers server HTML, URL-state behavior, favorites, product routes, local resources, accessibility, 320 px layouts, reduced motion, WebGL fallback, and pointer-driven canvas updates.
+`npm run build` also enforces a gzip budget for individual client chunks. The browser suite covers server HTML, URL-state behavior, favorites, product routes, local resources, accessibility, layouts from 320 to 1600 px, reduced motion, WebGL fallback, and pointer-driven canvas updates.
 
 Install the Playwright browsers once before the first local browser run:
 

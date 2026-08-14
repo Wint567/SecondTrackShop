@@ -1,7 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
-import { loadEnvConfig } from "@next/env";
+import nextEnv from "@next/env";
 
-loadEnvConfig(process.cwd());
+nextEnv.loadEnvConfig(process.cwd());
 
 const port = 3100;
 const localBaseUrl = `http://127.0.0.1:${port}`;

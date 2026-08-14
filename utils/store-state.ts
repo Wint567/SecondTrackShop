@@ -1,4 +1,5 @@
 import type { Product } from "@/types/product";
+import { isAbortError } from "./request.ts";
 
 export type StoreErrorInfo = {
   area: "items" | "photos" | "unknown";
@@ -20,6 +21,7 @@ export async function loadInitialStoreState(
       products: await fetchItems(),
     };
   } catch (cause) {
+    if (isAbortError(cause)) throw cause;
     // A transient Supabase failure must not become the route's ISR snapshot.
     markUncacheable();
     const area =

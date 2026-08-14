@@ -9,6 +9,8 @@ import { useBodyLock } from "@/hooks/use-body-lock";
 import { useDialogFocus } from "@/hooks/use-dialog-focus";
 import { useStoreItems } from "@/hooks/use-store-items";
 import { formatArchivePrice } from "@/utils/format";
+import { presentCategory } from "@/utils/presentation";
+import { searchProducts } from "@/utils/search";
 
 export function SearchOverlay({ onClose }: { onClose: () => void }) {
   const router = useRouter();
@@ -26,23 +28,15 @@ export function SearchOverlay({ onClose }: { onClose: () => void }) {
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [onClose]);
 
-  const matches = useMemo(() => {
-    const query = searchValue.trim().toLocaleLowerCase();
-    if (!query) return products;
-    const tokens = query.split(/\s+/).filter(Boolean);
-    return products.filter((product) => {
-      const haystack = [product.title, product.brand, product.category, product.description]
-        .join(" ")
-        .toLocaleLowerCase();
-      return tokens.every((token) => haystack.includes(token));
-    });
-  }, [products, searchValue]);
+  const matches = useMemo(() => searchProducts(products, searchValue), [products, searchValue]);
   const displayed = matches.slice(0, 4);
   const suggestions = useMemo(
     () =>
       [
         ...new Set(
-          products.flatMap((product) => [product.brand, product.category]).filter(Boolean),
+          products
+            .flatMap((product) => [product.brand, presentCategory(product.category)])
+            .filter(Boolean),
         ),
       ].slice(0, 4),
     [products],
@@ -97,6 +91,7 @@ export function SearchOverlay({ onClose }: { onClose: () => void }) {
             Name, brand or category
           </label>
           <input
+            aria-describedby="search-results-status"
             autoComplete="off"
             id="header-search"
             name="search"
@@ -121,7 +116,7 @@ export function SearchOverlay({ onClose }: { onClose: () => void }) {
             ))}
           </aside>
           <div className="search-panel__results">
-            <h3>
+            <h3 aria-live="polite" id="search-results-status">
               {loading
                 ? "Searching..."
                 : `Showing ${displayed.length} of ${matches.length}${searchValue ? ` for ${searchValue}` : ""}`}

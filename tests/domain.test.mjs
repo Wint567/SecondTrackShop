@@ -18,6 +18,8 @@ import {
   pluralizeProducts,
 } from "../utils/format.ts";
 import { selectProductPhotos } from "../utils/photos.ts";
+import { createAbortError, isAbortError } from "../utils/request.ts";
+import { searchProducts } from "../utils/search.ts";
 import { getPublicStatus } from "../utils/status.ts";
 import { loadInitialStoreState } from "../utils/store-state.ts";
 import {
@@ -59,6 +61,64 @@ test("catalog search is case-insensitive, trims whitespace and matches brand", (
     ["one"],
   );
   assert.equal(normalizeCatalogSearch("  NIKE   Air  "), "nike air");
+});
+
+test("archive search ranks exact brands and searches translated public fields", () => {
+  const products = [
+    product({
+      brand: "Adidas",
+      category: "Худи",
+      condition: "Новое",
+      id: "older",
+      title: "Archive T-shirt",
+    }),
+    product({
+      brand: "Nike",
+      category: "Худи",
+      condition: "Новое",
+      id: "newer",
+      title: "Adidas-inspired layer",
+    }),
+    product({
+      brand: "Fieldworks",
+      category: "Куртка",
+      condition: "Хорошее",
+      id: "translated",
+      title: "Workwear shell",
+    }),
+  ];
+
+  assert.deepEqual(
+    searchProducts(products, "adidas").map((item) => item.id),
+    ["older", "newer"],
+  );
+  assert.deepEqual(
+    searchProducts(products, "jacket good").map((item) => item.id),
+    ["translated"],
+  );
+});
+
+test("aborted Supabase requests are recognized without reporting a store failure", () => {
+  assert.equal(isAbortError({ name: "AbortError" }), true);
+  assert.equal(isAbortError({ code: "ABORT_ERR" }), true);
+  assert.equal(isAbortError({ message: "AbortError: signal is aborted without reason" }), true);
+  assert.equal(isAbortError(new Error("Network unavailable")), false);
+});
+
+test("an aborted initial read is propagated without creating a false catalog error", async () => {
+  let markedUncacheable = false;
+  await assert.rejects(
+    loadInitialStoreState(
+      async () => {
+        throw createAbortError();
+      },
+      () => {
+        markedUncacheable = true;
+      },
+    ),
+    { name: "AbortError" },
+  );
+  assert.equal(markedUncacheable, false);
 });
 
 test("catalog combines filters and favorites without duplicates", () => {

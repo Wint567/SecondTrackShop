@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { Product } from "@/types/product";
+import { isAbortError } from "@/utils/request";
 import type { StoreErrorInfo } from "@/utils/store-state";
 
 type AsyncState<T> = {
@@ -11,13 +12,22 @@ type AsyncState<T> = {
   retry: () => void;
 };
 
+let clientProductCache: Product[] | undefined;
+
 export function useStoreItems(
   initialData?: Product[],
   initialError: StoreErrorInfo | null = null,
   enabled = true,
 ): AsyncState<Product[]> {
-  const hasInitialState = initialData !== undefined;
-  const [data, setData] = useState<Product[]>(initialData ?? []);
+  const [seededData] = useState<Product[] | undefined>(() => {
+    const cachedData = typeof window === "undefined" ? undefined : clientProductCache;
+    if (typeof window !== "undefined" && initialData !== undefined && !initialError) {
+      clientProductCache = initialData;
+    }
+    return initialData ?? cachedData;
+  });
+  const hasInitialState = seededData !== undefined;
+  const [data, setData] = useState<Product[]>(seededData ?? []);
   const [loading, setLoading] = useState(!hasInitialState && enabled);
   const [error, setError] = useState<Error | null>(
     initialError ? new Error(initialError.code) : null,
@@ -39,10 +49,13 @@ export function useStoreItems(
     import("@/services/store")
       .then(({ fetchPublicItems }) => fetchPublicItems(controller.signal))
       .then((items) => {
-        if (active) setData(items);
+        if (active) {
+          clientProductCache = items;
+          setData(items);
+        }
       })
       .catch((cause: unknown) => {
-        if (active && !controller.signal.aborted)
+        if (active && !controller.signal.aborted && !isAbortError(cause))
           setError(cause instanceof Error ? cause : new Error("store-load-failed"));
       })
       .finally(() => {
@@ -81,7 +94,7 @@ export function useStoreItem(slug: string, initialData?: Product): AsyncState<Pr
         if (active) setData(item);
       })
       .catch((cause: unknown) => {
-        if (active && !controller.signal.aborted)
+        if (active && !controller.signal.aborted && !isAbortError(cause))
           setError(cause instanceof Error ? cause : new Error("item-load-failed"));
       })
       .finally(() => {
@@ -136,7 +149,7 @@ export function useRelatedStoreItems(
         if (active) setData(items);
       })
       .catch((cause: unknown) => {
-        if (active && !controller.signal.aborted)
+        if (active && !controller.signal.aborted && !isAbortError(cause))
           setError(cause instanceof Error ? cause : new Error("related-load-failed"));
       })
       .finally(() => {

@@ -65,11 +65,17 @@ export function Header() {
           </nav>
 
           <div className="header-actions">
-            <button className="header-search" onClick={() => setSearchOpen(true)} type="button">
+            <button
+              aria-label="Search"
+              className="header-search"
+              onClick={() => setSearchOpen(true)}
+              type="button"
+            >
               <span>Search</span>
               <Search aria-hidden="true" />
             </button>
             <Link
+              aria-label={`Favorites, ${favorites.size} saved`}
               aria-current={pathname === "/saved" ? "page" : undefined}
               className={`saved-link ${pathname === "/saved" ? "is-active" : ""}`}
               href="/saved"

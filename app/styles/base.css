@@ -54,6 +54,45 @@ select {
   font: inherit;
 }
 
+select,
+select option {
+  color: var(--ink);
+}
+
+select {
+  color-scheme: light;
+}
+
+:where(.search-panel, .filter-drawer, .filter-options, .mobile-menu nav) {
+  scrollbar-color: var(--pink) var(--paper-deep);
+  scrollbar-width: thin;
+}
+
+:where(.search-panel, .filter-drawer, .filter-options, .mobile-menu nav)::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+:where(.search-panel, .filter-drawer, .filter-options, .mobile-menu nav)::-webkit-scrollbar-track {
+  border-left: 1px solid var(--ink);
+  background: var(--paper-deep);
+}
+
+:where(.search-panel, .filter-drawer, .filter-options, .mobile-menu nav)::-webkit-scrollbar-thumb {
+  border: 2px solid var(--paper-deep);
+  border-radius: 999px;
+  background: var(--pink);
+}
+
+:where(
+    .search-panel,
+    .filter-drawer,
+    .filter-options,
+    .mobile-menu nav
+  )::-webkit-scrollbar-thumb:hover {
+  background: var(--ink);
+}
+
 button,
 a {
   -webkit-tap-highlight-color: transparent;
