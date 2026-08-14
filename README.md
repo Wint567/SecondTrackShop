@@ -1,8 +1,10 @@
 # SECONDTRACK Public Store
 
-[![Quality](https://github.com/Wint567/SecondTrackShop/actions/workflows/ci.yml/badge.svg)](https://github.com/Wint567/SecondTrackShop/actions/workflows/ci.yml)
-
 An editorial, server-rendered storefront for curated second-hand clothing. The site presents live inventory from Supabase, keeps favorites locally, and hands purchasing off to Vinted. It deliberately has no account system, cart, checkout, or write access to the inventory database.
+
+**Stack:** Next.js · TypeScript · Supabase · Playwright · Vercel
+
+[![Quality](https://github.com/Wint567/SecondTrackShop/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Wint567/SecondTrackShop/actions/workflows/ci.yml?query=branch%3Amain)
 
 ![SECONDTRACK social preview](public/og-cut-paste.webp)
 
