@@ -24,7 +24,7 @@
     "build": "next build && npm run bundle:check",
     "start": "next start",
     "test": "npm run test:unit && npm run test:e2e",
-    "test:unit": "node --test --experimental-test-isolation=none tests/domain.test.mjs",
+    "test:unit": "node --test --experimental-test-isolation=none tests/*.test.mjs",
     "test:e2e": "playwright test",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "typecheck": "tsc --noEmit",
