@@ -177,7 +177,7 @@ async function fetchPhotosByItemIds(itemIds: string[], signal?: AbortSignal) {
   if (!supabase || itemIds.length === 0) return [];
 
   const { data, error } = await supabase
-    .from("item_photos")
+    .from("public_store_item_photos")
     .select("id,item_id,image_url,created_at")
     .in("item_id", itemIds)
     .order("created_at", { ascending: true })
