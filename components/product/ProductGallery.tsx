@@ -2,6 +2,7 @@
 
 import { ArrowLeft, ArrowRight, X } from "lucide-react";
 import { KeyboardEvent, TouchEvent, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ProductImage } from "@/components/ui/ProductImage";
 import { useBodyLock } from "@/hooks/use-body-lock";
 import { useDialogFocus } from "@/hooks/use-dialog-focus";
@@ -119,55 +120,61 @@ export function ProductGallery({ photos, title }: { photos: ProductPhoto[]; titl
           <ArrowRight aria-hidden="true" />
         </button>
       </div>
-      {zoomOpen && (
-        <div className="overlay product-lightbox" onMouseDown={() => setZoomOpen(false)}>
-          <section
-            aria-label={`${title} enlarged photo`}
-            aria-modal="true"
-            className="product-lightbox__dialog"
-            onMouseDown={(event) => event.stopPropagation()}
-            ref={dialogRef}
-            role="dialog"
+      {zoomOpen &&
+        createPortal(
+          <div
+            className="overlay product-lightbox"
+            onClick={(event) => {
+              if (event.target === event.currentTarget) setZoomOpen(false);
+            }}
           >
-            <button
-              aria-label="Close enlarged photo"
-              className="product-lightbox__close"
-              onClick={() => setZoomOpen(false)}
-              ref={closeRef}
-              type="button"
+            <section
+              aria-label={`${title} enlarged photo`}
+              aria-modal="true"
+              className="product-lightbox__dialog"
+              ref={dialogRef}
+              role="dialog"
             >
-              <X aria-hidden="true" />
-            </button>
-            <ProductImage
-              alt={`${title}, photo ${selectedIndex + 1}`}
-              eager
-              sizes="96vw"
-              src={safePhotos[selectedIndex]?.url}
-            />
-            {safePhotos.length > 1 && (
-              <div className="product-lightbox__controls">
-                <button
-                  aria-label="Previous photo"
-                  onClick={() => show(selectedIndex - 1)}
-                  type="button"
-                >
-                  <ArrowLeft aria-hidden="true" />
-                </button>
-                <span aria-live="polite">
-                  {selectedIndex + 1} / {safePhotos.length}
-                </span>
-                <button
-                  aria-label="Next photo"
-                  onClick={() => show(selectedIndex + 1)}
-                  type="button"
-                >
-                  <ArrowRight aria-hidden="true" />
-                </button>
-              </div>
-            )}
-          </section>
-        </div>
-      )}
+              <button
+                aria-label="Close enlarged photo"
+                className="product-lightbox__close"
+                onClick={() => setZoomOpen(false)}
+                ref={closeRef}
+                type="button"
+              >
+                <X aria-hidden="true" />
+              </button>
+              <ProductImage
+                alt={`${title}, photo ${selectedIndex + 1}`}
+                eager
+                sizes="96vw"
+                src={safePhotos[selectedIndex]?.url}
+              />
+              {safePhotos.length > 1 && (
+                <div className="product-lightbox__controls">
+                  <button
+                    aria-label="Previous photo"
+                    onClick={() => show(selectedIndex - 1)}
+                    type="button"
+                  >
+                    <ArrowLeft aria-hidden="true" />
+                  </button>
+                  <span aria-live="polite">
+                    {selectedIndex + 1} / {safePhotos.length}
+                  </span>
+                  <button
+                    aria-label="Next photo"
+                    onClick={() => show(selectedIndex + 1)}
+                    type="button"
+                  >
+                    <ArrowRight aria-hidden="true" />
+                  </button>
+                </div>
+              )}
+            </section>
+          </div>,
+          document.body,
+        )}
     </section>
   );
 }

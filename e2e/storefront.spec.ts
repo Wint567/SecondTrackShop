@@ -137,6 +137,33 @@ test("product route exposes gallery, metadata and safe purchase handoff", async 
   }
 });
 
+test("enlarged product photo stays usable on a short viewport", async ({ page }) => {
+  test.skip(!hasPublicStoreConfiguration, "Public catalog configuration is required.");
+  await page.setViewportSize({ height: 360, width: 320 });
+  await page.goto("/catalog");
+  await page.locator(".product-card__link").first().click();
+
+  const zoomTrigger = page.getByRole("button", { name: /^Enlarge / });
+  await zoomTrigger.click();
+
+  const lightbox = page.locator(".product-lightbox");
+  const dialog = page.getByRole("dialog", { name: /enlarged photo$/ });
+  await expect(dialog).toBeVisible();
+  expect(await lightbox.evaluate((element) => element.parentElement === document.body)).toBe(true);
+  expect(await lightbox.evaluate((element) => getComputedStyle(element).overflowY)).toBe("auto");
+  expect(await page.evaluate(() => document.body.style.overflow)).toBe("hidden");
+
+  const bounds = await dialog.boundingBox();
+  expect(bounds).not.toBeNull();
+  expect(bounds?.y).toBeGreaterThanOrEqual(0);
+  expect((bounds?.y ?? 0) + (bounds?.height ?? 0)).toBeLessThanOrEqual(360);
+  await expect(dialog.getByRole("button", { name: "Close enlarged photo" })).toBeVisible();
+
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(zoomTrigger).toBeFocused();
+});
+
 test("primary routes have no critical or serious accessibility violations", async ({ page }) => {
   test.setTimeout(60_000);
   for (const pathname of ["/", "/catalog", "/about", "/saved"]) {

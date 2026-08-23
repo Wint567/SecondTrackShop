@@ -106,21 +106,40 @@
 }
 
 .product-lightbox {
-  z-index: 120;
-  display: grid;
-  place-items: center;
+  z-index: 220;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 28px;
   background: rgb(8 8 8 / 88%);
 }
 
 .product-lightbox__dialog {
   position: relative;
+  flex: 0 0 auto;
   display: grid;
   place-items: center;
-  width: min(1100px, 94vw);
-  height: min(860px, 90vh);
+  width: min(1100px, 100%);
+  height: min(860px, calc(100vh - 56px));
+  height: min(860px, calc(100dvh - 56px));
+  min-height: 0;
   border: 1px solid rgb(255 255 255 / 36%);
   background: #111;
+}
+
+@media (max-width: 767px), (max-height: 560px) {
+  .product-lightbox {
+    padding: 12px;
+  }
+
+  .product-lightbox__dialog {
+    width: 100%;
+    height: calc(100vh - 24px);
+    height: calc(100dvh - 24px);
+  }
 }
 
 .product-lightbox__dialog > .product-image,
