@@ -4,6 +4,10 @@ An editorial, server-rendered storefront for curated second-hand clothing. The s
 
 **Stack:** Next.js · TypeScript · Supabase · Playwright · Vercel
 
+**[Live demo](https://second-track-shop.vercel.app)** · **[Catalog](https://second-track-shop.vercel.app/catalog)**
+
+To explore the interface, try a catalog filter, open a product gallery, and save an item to favorites. Favorites are stored in the current browser.
+
 [![Quality](https://github.com/Wint567/SecondTrackShop/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Wint567/SecondTrackShop/actions/workflows/ci.yml?query=branch%3Amain)
 
 ![SECONDTRACK social preview](public/og-cut-paste.webp)
